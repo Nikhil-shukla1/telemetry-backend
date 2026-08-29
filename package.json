@@ -1,0 +1,16 @@
+{
+  "name": "telemetry-backend",
+  "version": "1.0.0",
+  "description": "IoT Mining Fleet Telemetry Platform Backend",
+  "type": "module",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "test": "vitest run"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
