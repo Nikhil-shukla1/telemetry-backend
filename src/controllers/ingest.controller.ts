@@ -4,6 +4,7 @@ import { processTelemetryBatch } from '../services/telemetry.service.js';
 export async function ingestTelemetry(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const rawBatch = req.body;
+    console.log("RawData----->", rawBatch);
 
     if (!Array.isArray(rawBatch)) {
       res.status(400).json({
