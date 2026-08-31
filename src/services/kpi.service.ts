@@ -72,7 +72,7 @@ export function extractGpsTrack(items: Partial<ITelemetry>[]): GpsTrackPoint[] {
     const alt = parseNum(pos.altitude ?? item.rawPayload?.['position.altitude'] ?? rawPos.altitude);
     const spd = parseNum(pos.speed ?? item.rawPayload?.['position.speed'] ?? rawPos.speed);
 
-    const isValid = valid === true || valid === 1 || valid === 'true';
+    const isValid = valid !== false && valid !== 0 && valid !== 'false';
 
     if (
       isValid &&
@@ -99,15 +99,36 @@ export function extractGpsTrack(items: Partial<ITelemetry>[]): GpsTrackPoint[] {
 
 export async function getVehicleKpis(vehicleIdent: string, fromDate?: Date, toDate?: Date) {
   const now = new Date();
-  const queryFrom = fromDate || new Date(now.getTime() - 24 * 60 * 60 * 1000);
-  const queryTo = toDate || now;
+  let queryFrom = fromDate || new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  let queryTo = toDate || now;
 
-  const items = await Telemetry.find({
+  let items = await Telemetry.find({
     vehicleIdent,
     timestamp: { $gte: queryFrom, $lte: queryTo },
   })
     .sort({ timestamp: 1 })
     .lean<ITelemetry[]>();
+
+  // Fallback: If 0 items found in the strict time window (e.g. 15m) but vehicle telemetry exists in DB,
+  // query relative to the vehicle's latest telemetry timestamp so data is never empty when records exist.
+  if (items.length === 0 && fromDate) {
+    const latestItem = await Telemetry.findOne({ vehicleIdent })
+      .sort({ timestamp: -1 })
+      .lean<ITelemetry>();
+
+    if (latestItem && latestItem.timestamp) {
+      const windowDurationMs = queryTo.getTime() - queryFrom.getTime();
+      queryTo = new Date(latestItem.timestamp);
+      queryFrom = new Date(queryTo.getTime() - windowDurationMs);
+
+      items = await Telemetry.find({
+        vehicleIdent,
+        timestamp: { $gte: queryFrom, $lte: queryTo },
+      })
+        .sort({ timestamp: 1 })
+        .lean<ITelemetry[]>();
+    }
+  }
 
   return {
     vehicleIdent,
