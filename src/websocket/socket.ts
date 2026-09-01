@@ -49,11 +49,12 @@ export function initSocketIO(httpServer: HttpServer): Server {
     socket.on('request:vehicles', sendVehicles);
 
     // Fetch and send KPI data over socket
-    const handleGetKpis = async (payload: { vehicleIdent?: string; from?: string; to?: string } | string) => {
+    const handleGetKpis = async (payload: { vehicleIdent?: string; from?: string; to?: string; requestId?: string | number } | string) => {
       try {
         let vehicleIdent = '';
         let fromStr: string | undefined;
         let toStr: string | undefined;
+        let requestId: string | number | undefined;
 
         if (typeof payload === 'string') {
           vehicleIdent = payload;
@@ -61,10 +62,11 @@ export function initSocketIO(httpServer: HttpServer): Server {
           vehicleIdent = payload.vehicleIdent || '';
           fromStr = payload.from;
           toStr = payload.to;
+          requestId = payload.requestId;
         }
 
         if (!vehicleIdent) {
-          socket.emit('error', { message: 'vehicleIdent is required for get:kpis' });
+          socket.emit('error', { message: 'vehicleIdent is required for get:kpis', requestId });
           return;
         }
 
@@ -72,9 +74,11 @@ export function initSocketIO(httpServer: HttpServer): Server {
         const toDate = toStr ? new Date(toStr) : undefined;
 
         const kpiData = await getVehicleKpis(vehicleIdent, fromDate, toDate);
-        socket.emit('vehicle:kpis', kpiData);
-        socket.emit('kpis:data', kpiData);
-        socket.emit('kpis', kpiData);
+        const responseData = { ...kpiData, requestId };
+
+        socket.emit('vehicle:kpis', responseData);
+        socket.emit('kpis:data', responseData);
+        socket.emit('kpis', responseData);
       } catch (error: any) {
         console.error(`[Socket.IO] Error fetching KPIs for client ${socket.id}:`, error);
         socket.emit('error', { message: error.message || 'Failed to fetch KPIs over socket' });
