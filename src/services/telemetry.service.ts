@@ -2,7 +2,7 @@ import { Telemetry } from '../models/telemetry.js';
 import { Vehicle } from '../models/vehicle.js';
 import { generateMessageHash } from '../utils/hash.js';
 import { mapRawPayloadToStructured } from '../utils/telemetryMapper.js';
-import { emitTelemetryUpdate } from '../websocket/socket.js';
+import { emitTelemetryUpdate, broadcastVehiclesList } from '../websocket/socket.js';
 import { getVehicleKpis } from './kpi.service.js';
 
 export async function processTelemetryBatch(rawMessages: any[]) {
@@ -76,5 +76,10 @@ export async function processTelemetryBatch(rawMessages: any[]) {
     }
   }
 
+  if (result.stored > 0) {
+    await broadcastVehiclesList();
+  }
+
   return result;
 }
+
