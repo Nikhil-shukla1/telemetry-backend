@@ -55,15 +55,11 @@ export async function processTelemetryBatch(rawMessages: any[]) {
         { upsert: true }
       );
 
-      // Calculate updated vehicle KPIs at ingestion time before emitting socket event
-      const updatedKpis = await getVehicleKpis(ident);
-
-      // Emit real-time telemetry update alongside newly calculated KPIs
+      // Emit real-time telemetry update for connected clients
       emitTelemetryUpdate(ident, {
         ident,
         timestamp: timestamp.toISOString(),
         ...structuredData,
-        kpis: updatedKpis,
       });
     } catch (err: any) {
       if (err.code === 11000 || (err.message && err.message.includes('E11000'))) {
